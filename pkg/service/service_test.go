@@ -1,4 +1,4 @@
-package apptest
+package service
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func Test_Tx(t *testing.T) {
+func Test_NoConnectionLeak(t *testing.T) {
 	pg, err := apptest.StartTestPostgres(t)
 	require.NoError(t, err)
 
@@ -17,15 +17,16 @@ func Test_Tx(t *testing.T) {
 	_, err = pg.DB.Exec("INSERT INTO subscription (status, canceled_at) VALUES ('active', NULL)")
 	require.NoError(t, err)
 
-	_, err = pg.DB.Exec("INSERT INTO subscription (status, canceled_at) VALUES ('canceled', '2020-01-01 00:00:00')")
+	_, err = pg.DB.Exec("INSERT INTO subscription (status, canceled_at) VALUES ('canceled', '2023-02-02 01:00:00')")
 	require.NoError(t, err)
 
-	subscription, err := NewService(pg.DB, &srepo{}).CancelSubscription(context.Background(), 2)
+	subscription, err := NewTxService(pg.DB, &txRepo{}).CancelSubscriptionWithoutLeak(context.Background(), 2)
 	require.NoError(t, err)
 
 	stats := pg.DB.Stats()
-	require.Equal(t, 0, stats.InUse)
-	require.Equal(t, 0, stats.MaxOpenConnections)
+	require.Equal(t, 0, stats.InUse, "expected no connections in use")
+	require.Equal(t, 0, stats.MaxOpenConnections, "expected no max open connection")
 
 	require.Equal(t, "canceled", subscription.Status)
+	require.Equal(t, "2023-02-02 01:00:00 +0000 +0000", subscription.CanceledAt.Time.String())
 }

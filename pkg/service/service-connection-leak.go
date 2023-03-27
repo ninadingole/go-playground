@@ -1,4 +1,4 @@
-package apptest
+package service
 
 import (
 	"context"
@@ -12,9 +12,12 @@ type Subscription struct {
 	CanceledAt sql.NullTime `db:"canceled_at"`
 }
 
+// ------------------------------ Repository ------------------------------
+
 type srepo struct {
 }
 
+// GetSubscription gets the subscription from the database
 func (r *srepo) GetSubscription(tx *sqlx.Tx, id int64) (Subscription, error) {
 	var sub Subscription
 	err := tx.Get(&sub, "SELECT * FROM subscription WHERE id = $1", id)
@@ -25,15 +28,20 @@ func (r *srepo) GetSubscription(tx *sqlx.Tx, id int64) (Subscription, error) {
 	return sub, nil
 }
 
+// CancelSubscription cancels the subscription
+// it sets the canceled_at column to the current time
+// and status to "canceled" and returns the updated subscription
 func (r *srepo) CancelSubscription(tx *sqlx.Tx, id int64) (Subscription, error) {
 	var sub Subscription
-	err := tx.Get(&sub, "UPDATE subscription SET canceled_at = NOW() WHERE id = $1 RETURNING *", id)
+	err := tx.Get(&sub, "UPDATE subscription SET canceled_at = NOW(), status='canceled' WHERE id = $1 RETURNING *", id)
 	if err != nil {
 		return sub, err
 	}
 
 	return sub, nil
 }
+
+// ------------------------------ Service ------------------------------
 
 type Service struct {
 	db   *sqlx.DB
