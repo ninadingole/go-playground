@@ -50,11 +50,11 @@ func InTx(ctx context.Context, db *sqlx.DB, txFunc func(*TxWrap) error) (err err
 
 	defer func() {
 		if p := recover(); p != nil {
-			tx.Rollback()
+			_ = txWrap.tx.Rollback()
 			panic(p)
 		}
 		if err != nil {
-			txWrap.tx.Rollback()
+			_ = txWrap.tx.Rollback()
 			return
 		}
 		err = txWrap.tx.Commit()

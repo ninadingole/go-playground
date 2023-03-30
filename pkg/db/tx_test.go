@@ -13,20 +13,18 @@ import (
 // ------------------------------ UNIT Test ------------------------------
 
 func Test_Unit(t *testing.T) {
-
-	db, _ := sqlx.Open("postgres", "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable")
-	db.Stats()
+	t.Parallel()
 
 	tests := []struct {
 		name      string
-		fn        func(tx *TxWrap) error
+		txfunc    func(tx *TxWrap) error
 		setup     func(mock sqlmock.Sqlmock)
 		wantErr   bool
 		wantPanic bool
 	}{
 		{
 			name: "success path",
-			fn: func(tx *TxWrap) error {
+			txfunc: func(tx *TxWrap) error {
 				return nil
 			},
 			setup: func(mock sqlmock.Sqlmock) {
@@ -36,7 +34,7 @@ func Test_Unit(t *testing.T) {
 		},
 		{
 			name: "failure path",
-			fn: func(tx *TxWrap) error {
+			txfunc: func(tx *TxWrap) error {
 				return errors.New("some error")
 			},
 			setup: func(mock sqlmock.Sqlmock) {
@@ -47,7 +45,7 @@ func Test_Unit(t *testing.T) {
 		},
 		{
 			name: "panic",
-			fn: func(tx *TxWrap) error {
+			txfunc: func(tx *TxWrap) error {
 				panic("some panic")
 				return nil
 			},
@@ -81,7 +79,7 @@ func Test_Unit(t *testing.T) {
 				require.Equal(t, 0, stats.MaxOpenConnections)
 			}()
 
-			err = InTx(context.Background(), dbx, test.fn)
+			err = InTx(context.Background(), dbx, test.txfunc)
 
 			require.Equal(t, test.wantErr, err != nil)
 			require.NoError(t, mock.ExpectationsWereMet())
